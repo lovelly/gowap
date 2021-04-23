@@ -60,8 +60,22 @@ type GoWapTransport struct {
 	respCallBack func(resp *http.Response)
 }
 
-func NewGoWapTransport(t *http.Transport, f func(resp *http.Response)) *GoWapTransport {
-	return &GoWapTransport{Transport: t, respCallBack: f}
+func NewGoWapTransport(t *http.Transport, f func(resp *http.Response), host string) *GoWapTransport {
+	if host == "" {
+		return &GoWapTransport{Transport: t, respCallBack: f}
+	}else{
+		return &GoWapTransport{Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: time.Second * 90,
+			}).DialContext,
+			MaxIdleConns:          0,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true, ServerName:host},
+		}, respCallBack: f}
+	}
+
 }
 
 func (gt *GoWapTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -175,7 +189,7 @@ func (wapp *Wappalyzer) Analyze(url, host string) (result interface{}, err error
 		}
 	}
 
-	wapp.Collector.WithTransport(NewGoWapTransport(wapp.Transport, setResp))
+	wapp.Collector.WithTransport(NewGoWapTransport(wapp.Transport, setResp, host))
 	addHost(wapp.Collector, host)
 	extensions.Referer(wapp.Collector)
 	extensions.RandomUserAgent(wapp.Collector)
@@ -476,6 +490,9 @@ func parseCategories(app *application, categoriesCatalog *map[string]*category) 
 }
 
 func addHost(c *colly.Collector, host string) {
+	if host == "" {
+		return
+	}
 	c.OnRequest(func(r *colly.Request) {
 		r.Headers.Add("HOST", host)
 	})
