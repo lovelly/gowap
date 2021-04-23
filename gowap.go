@@ -153,7 +153,7 @@ type resultApp struct {
 }
 
 // Analyze retrieves application stack used on the provided web-site
-func (wapp *Wappalyzer) Analyze(url string) (result interface{}, err error) {
+func (wapp *Wappalyzer) Analyze(url, host string) (result interface{}, err error) {
 	wapp.Collector = colly.NewCollector(
 		colly.IgnoreRobotsTxt(),
 	)
@@ -176,6 +176,7 @@ func (wapp *Wappalyzer) Analyze(url string) (result interface{}, err error) {
 	}
 
 	wapp.Collector.WithTransport(NewGoWapTransport(wapp.Transport, setResp))
+	addHost(wapp.Collector, host)
 	extensions.Referer(wapp.Collector)
 	extensions.RandomUserAgent(wapp.Collector)
 
@@ -472,4 +473,10 @@ func parseCategories(app *application, categoriesCatalog *map[string]*category) 
 	for _, categoryID := range app.Cats {
 		app.Categories = append(app.Categories, (*categoriesCatalog)[strconv.Itoa(categoryID)].Name)
 	}
+}
+
+func addHost(c *colly.Collector, host string) {
+	c.OnRequest(func(r *colly.Request) {
+		r.Headers.Add("HOST", host)
+	})
 }
