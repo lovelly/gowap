@@ -2,14 +2,15 @@ package gowap
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func TestGowap(t *testing.T) {
-	url := "https://tengrinews.kz"
-	wapp, err := Init("./apps.json", false)
+	url := "https://www.boce.com"
+	wapp, err := Init()
 	if err != nil {
 		log.Errorln(err)
 		t.FailNow()
@@ -24,5 +25,5 @@ func TestGowap(t *testing.T) {
 		log.Errorln(err)
 		t.FailNow()
 	}
-	log.Infof("[*] Result for %s:\n%s", url, string(prettyJSON))
+	fmt.Println( string(prettyJSON))
 }

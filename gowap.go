@@ -2,6 +2,7 @@ package gowap
 
 import (
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -78,8 +79,15 @@ type Wappalyzer struct {
 	Transport  *http.Transport
 }
 
+//go:embed apps.json
+var appConfig []byte
+
+func Init() (wapp *Wappalyzer, err error) {
+	return InitWhitConfig("", false)
+}
+
 // Init initializes wappalyzer
-func Init(appsJSONPath string, JSON bool) (wapp *Wappalyzer, err error) {
+func InitWhitConfig(appsJSONPath string, JSON bool) (wapp *Wappalyzer, err error) {
 	wapp = &Wappalyzer{}
 	wapp.Transport = &http.Transport{
 		DialContext: (&net.Dialer{
@@ -91,17 +99,27 @@ func Init(appsJSONPath string, JSON bool) (wapp *Wappalyzer, err error) {
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 	}
-	appsFile, err := ioutil.ReadFile(appsJSONPath)
-	if err != nil {
-		log.Errorf("Couldn't open file at %s\n", appsJSONPath)
-		return nil, err
-	}
 	temporary := &temp{}
-	err = json.Unmarshal(appsFile, &temporary)
-	if err != nil {
-		log.Errorf("Couldn't unmarshal apps.json file: %s\n", err)
-		return nil, err
+	if appsJSONPath == "" {
+		err = json.Unmarshal(appConfig, &temporary)
+		if err != nil {
+			log.Errorf("Couldn't unmarshal apps.json file: %s\n", err)
+			return nil, err
+		}
+	} else {
+		appsFile, err := ioutil.ReadFile(appsJSONPath)
+		if err != nil {
+			log.Errorf("Couldn't open file at %s\n", appsJSONPath)
+			return nil, err
+		}
+
+		err = json.Unmarshal(appsFile, &temporary)
+		if err != nil {
+			log.Errorf("Couldn't unmarshal apps.json file: %s\n", err)
+			return nil, err
+		}
 	}
+
 	wapp.Apps = make(map[string]*application)
 	wapp.Categories = make(map[string]*category)
 	for k, v := range temporary.Categories {
